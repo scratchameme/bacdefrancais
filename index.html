@@ -5,59 +5,22 @@
   <title>Révisions Rimbaud – Fiches & Quiz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      background: linear-gradient(135deg, #ece9e6, #ffffff);
-    }
-    header {
-      background: #2c2c54;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin: 20px 0;
-    }
-    nav button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      background: #40407a;
-      color: white;
-      font-weight: bold;
-    }
-    nav button:hover { background: #706fd3; }
-    section { max-width: 800px; margin: auto; }
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    }
-    label { display: block; margin-top: 10px; font-weight: 600; }
-    input, textarea, select, button {
-      width: 100%;
-      margin-top: 5px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    textarea { resize: vertical; }
-    .hidden { display: none; }
-    .fiche-item { margin-bottom: 8px; }
-    .fiche-item button {
-      width: auto;
-      margin-left: 5px;
-      padding: 4px 8px;
-    }
-    .good { color: #218c74; font-weight: bold; }
-    .bad { color: #b33939; font-weight: bold; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; background: linear-gradient(135deg,#ece9e6,#fff); }
+    header { background:#2c2c54; color:#fff; padding:20px; text-align:center; }
+    nav { display:flex; justify-content:center; gap:10px; margin:20px 0; }
+    nav button { padding:10px 20px; border:none; border-radius:20px; cursor:pointer; background:#40407a; color:#fff; font-weight:bold; }
+    nav button:hover { background:#706fd3; }
+    section { max-width:900px; margin:auto; }
+    .card { background:#fff; padding:20px; margin-bottom:20px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
+    label { display:block; margin-top:10px; font-weight:600; }
+    input, textarea, select, button { width:100%; margin-top:5px; padding:10px; border-radius:8px; border:1px solid #ccc; }
+    textarea { resize:vertical; }
+    .hidden { display:none; }
+    .fiche-item { margin-bottom:8px; }
+    .fiche-item button { width:auto; margin-left:5px; padding:4px 8px; }
+    .good { color:#218c74; font-weight:bold; }
+    .bad { color:#b33939; font-weight:bold; }
+    .compare { background:#f1f2f6; padding:10px; border-radius:8px; margin-top:10px; }
   </style>
 </head>
 <body>
@@ -73,14 +36,14 @@
 </nav>
 
 <section id="data" class="card">
-  <h2>Créer / Modifier une fiche</h2>
+  <h2>Créer / Gérer les fiches</h2>
 
   <label>Catégorie
     <select id="category">
-      <option value="Poème">Poème</option>
-      <option value="Citation">Citation</option>
-      <option value="Définition">Définition</option>
-      <option value="Date">Date / Contexte</option>
+      <option>Poème</option>
+      <option>Citation</option>
+      <option>Définition</option>
+      <option>Date / Contexte</option>
     </select>
   </label>
 
@@ -93,6 +56,11 @@
   </label>
 
   <button onclick="addCard()">➕ Enregistrer</button>
+
+  <hr>
+
+  <button onclick="exportCards()">📤 Exporter les fiches</button>
+  <input type="file" id="importFile" accept="application/json" onchange="importCards(event)" />
 
   <h3>Fiches enregistrées</h3>
   <div id="dataList"></div>
@@ -111,6 +79,8 @@
   let score = 0;
   let history = [];
 
+  function save(){ localStorage.setItem('rimbaud_cards', JSON.stringify(cards)); }
+
   function showSection(id) {
     document.getElementById('data').classList.add('hidden');
     document.getElementById('quiz').classList.add('hidden');
@@ -118,100 +88,81 @@
     if (id === 'quiz') startQuiz();
   }
 
-  function addCard() {
-    const card = {
-      category: category.value,
-      question: questionInput.value.trim(),
-      answer: answerInput.value.trim()
-    };
-    if (!card.question || !card.answer) return;
-    cards.push(card);
-    save();
-    questionInput.value = '';
-    answerInput.value = '';
-    renderCards();
+  function addCard(){
+    const q = questionInput.value.trim();
+    const a = answerInput.value.trim();
+    if(!q||!a) return;
+    cards.push({ category:category.value, question:q, answer:a });
+    save(); questionInput.value=''; answerInput.value=''; renderCards();
   }
 
-  function save() {
-    localStorage.setItem('rimbaud_cards', JSON.stringify(cards));
-  }
+  function deleteCard(i){ cards.splice(i,1); save(); renderCards(); }
 
-  function deleteCard(i) {
-    cards.splice(i, 1);
-    save();
-    renderCards();
-  }
-
-  function renderCards() {
-    dataList.innerHTML = '';
-    cards.forEach((c, i) => {
-      dataList.innerHTML += `
-        <div class="fiche-item">
-          <strong>[${c.category}]</strong> ${c.question} → ${c.answer}
-          <button onclick="deleteCard(${i})">🗑️</button>
-        </div>`;
+  function renderCards(){
+    dataList.innerHTML='';
+    cards.forEach((c,i)=>{
+      dataList.innerHTML+=`<div class='fiche-item'><strong>[${c.category}]</strong> ${c.question} → ${c.answer}<button onclick='deleteCard(${i})'>🗑️</button></div>`;
     });
   }
 
-  function shuffle(arr) {
-    return arr.sort(() => Math.random() - 0.5);
+  function exportCards(){
+    const blob = new Blob([JSON.stringify(cards,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'fiches_rimbaud.json';
+    a.click();
   }
 
-  function startQuiz() {
-    quiz = shuffle([...cards]);
-    index = 0;
-    score = 0;
-    history = [];
-    nextQuestion();
+  function importCards(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(Array.isArray(data)){
+          cards = data; save(); renderCards();
+          alert('Fiches importées avec succès');
+        }
+      }catch{ alert('Fichier invalide'); }
+    };
+    reader.readAsText(file);
   }
 
-  function nextQuestion() {
-    if (index >= quiz.length) return endQuiz();
+  function shuffle(a){ return a.sort(()=>Math.random()-.5); }
+
+  function startQuiz(){ quiz=shuffle([...cards]); index=0; score=0; history=[]; nextQuestion(); }
+
+  function normalize(s){ return s.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g,''); }
+
+  function nextQuestion(){
+    if(index>=quiz.length) return endQuiz();
     progress.textContent = `${index}/${quiz.length} questions`;
-    quizBox.innerHTML = `
-      <p><strong>${quiz[index].question}</strong></p>
-      <textarea id="userAnswer"></textarea>
-      <button onclick="checkAnswer()">Valider</button>`;
+    quizBox.innerHTML = `<p><strong>${quiz[index].question}</strong></p><textarea id='userAnswer'></textarea><button onclick='checkAnswer()'>Valider</button>`;
   }
 
-  function normalize(str) {
-    return str.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g, '');
-  }
-
-  function checkAnswer() {
-    const user = document.getElementById('userAnswer').value;
+  function checkAnswer(){
+    const user = userAnswer.value;
     const correct = quiz[index].answer;
-    const isGood = normalize(user) === normalize(correct);
-    if (isGood) score++;
-    history.push({ question: quiz[index].question, user, correct, isGood });
+    const isGood = normalize(user)===normalize(correct);
+    if(isGood) score++;
+    history.push({question:quiz[index].question,user,correct,isGood});
     quizBox.innerHTML = `
-      <p class="${isGood ? 'good' : 'bad'}">${isGood ? '✅ Bonne réponse' : '❌ Mauvaise réponse'}</p>
-      <p><em>Réponse attendue :</em> ${correct}</p>
-      <button onclick="override(${history.length - 1})">Forcer comme bonne</button>
-      <button onclick="continueQuiz()">Continuer</button>`;
+      <p class='${isGood?'good':'bad'}'>${isGood?'✅ Bonne réponse':'❌ Mauvaise réponse'}</p>
+      <div class='compare'><strong>Ta réponse :</strong><br>${user||'(vide)'}<br><br><strong>Bonne réponse :</strong><br>${correct}</div>
+      <button onclick='override(${history.length-1})'>Forcer comme bonne</button>
+      <button onclick='continueQuiz()'>Continuer</button>`;
   }
 
-  function override(i) {
-    if (!history[i].isGood) score++;
-    history[i].isGood = true;
-    quizBox.innerHTML = '<p class="good">✔ Réponse validée manuellement</p><button onclick="continueQuiz()">Continuer</button>';
-  }
+  function override(i){ if(!history[i].isGood) score++; history[i].isGood=true; continueQuiz(); }
 
-  function continueQuiz() {
-    index++;
-    nextQuestion();
-  }
+  function continueQuiz(){ index++; nextQuestion(); }
 
-  function endQuiz() {
-    const percent = Math.round((score / quiz.length) * 100);
-    quizBox.innerHTML = `<h3>Résultat : ${percent}%</h3>`;
-    history.forEach(h => {
-      quizBox.innerHTML += `
-        <p class="${h.isGood ? 'good' : 'bad'}">
-          ${h.question}<br>
-          Ta réponse : ${h.user || '(vide)'}<br>
-          Bonne réponse : ${h.correct}
-        </p>`;
+  function endQuiz(){
+    const p = Math.round(score/quiz.length*100);
+    quizBox.innerHTML = `<h3>Résultat : ${p}%</h3>`;
+    history.forEach(h=>{
+      quizBox.innerHTML += `<p class='${h.isGood?'good':'bad'}'><strong>${h.question}</strong><br>Ta réponse : ${h.user||'(vide)'}<br>Bonne réponse : ${h.correct}</p>`;
     });
     progress.textContent = `${quiz.length}/${quiz.length} questions`;
   }
