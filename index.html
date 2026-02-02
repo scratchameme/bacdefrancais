@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Révisions Rimbaud – Fiches & Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #ece9e6, #ffffff);
+    }
+    header {
+      background: #2c2c54;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    nav button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      background: #40407a;
+      color: white;
+      font-weight: bold;
+    }
+    nav button:hover { background: #706fd3; }
+    section { max-width: 800px; margin: auto; }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input, textarea, select, button {
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    textarea { resize: vertical; }
+    .hidden { display: none; }
+    .fiche-item { margin-bottom: 8px; }
+    .fiche-item button {
+      width: auto;
+      margin-left: 5px;
+      padding: 4px 8px;
+    }
+    .good { color: #218c74; font-weight: bold; }
+    .bad { color: #b33939; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📘 Révisions – Arthur Rimbaud</h1>
+  <p>Fiches personnalisées & quiz intelligent</p>
+</header>
+
+<nav>
+  <button onclick="showSection('data')">📂 Fiches</button>
+  <button onclick="showSection('quiz')">📝 Test</button>
+</nav>
+
+<section id="data" class="card">
+  <h2>Créer / Modifier une fiche</h2>
+
+  <label>Catégorie
+    <select id="category">
+      <option value="Poème">Poème</option>
+      <option value="Citation">Citation</option>
+      <option value="Définition">Définition</option>
+      <option value="Date">Date / Contexte</option>
+    </select>
+  </label>
+
+  <label>Question
+    <input id="questionInput" />
+  </label>
+
+  <label>Réponse
+    <textarea id="answerInput"></textarea>
+  </label>
+
+  <button onclick="addCard()">➕ Enregistrer</button>
+
+  <h3>Fiches enregistrées</h3>
+  <div id="dataList"></div>
+</section>
+
+<section id="quiz" class="card hidden">
+  <h2>Test de révision</h2>
+  <p id="progress"></p>
+  <div id="quizBox"></div>
+</section>
+
+<script>
+  let cards = JSON.parse(localStorage.getItem('rimbaud_cards') || '[]');
+  let quiz = [];
+  let index = 0;
+  let score = 0;
+  let history = [];
+
+  function showSection(id) {
+    document.getElementById('data').classList.add('hidden');
+    document.getElementById('quiz').classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
+    if (id === 'quiz') startQuiz();
+  }
+
+  function addCard() {
+    const card = {
+      category: category.value,
+      question: questionInput.value.trim(),
+      answer: answerInput.value.trim()
+    };
+    if (!card.question || !card.answer) return;
+    cards.push(card);
+    save();
+    questionInput.value = '';
+    answerInput.value = '';
+    renderCards();
+  }
+
+  function save() {
+    localStorage.setItem('rimbaud_cards', JSON.stringify(cards));
+  }
+
+  function deleteCard(i) {
+    cards.splice(i, 1);
+    save();
+    renderCards();
+  }
+
+  function renderCards() {
+    dataList.innerHTML = '';
+    cards.forEach((c, i) => {
+      dataList.innerHTML += `
+        <div class="fiche-item">
+          <strong>[${c.category}]</strong> ${c.question} → ${c.answer}
+          <button onclick="deleteCard(${i})">🗑️</button>
+        </div>`;
+    });
+  }
+
+  function shuffle(arr) {
+    return arr.sort(() => Math.random() - 0.5);
+  }
+
+  function startQuiz() {
+    quiz = shuffle([...cards]);
+    index = 0;
+    score = 0;
+    history = [];
+    nextQuestion();
+  }
+
+  function nextQuestion() {
+    if (index >= quiz.length) return endQuiz();
+    progress.textContent = `${index}/${quiz.length} questions`;
+    quizBox.innerHTML = `
+      <p><strong>${quiz[index].question}</strong></p>
+      <textarea id="userAnswer"></textarea>
+      <button onclick="checkAnswer()">Valider</button>`;
+  }
+
+  function normalize(str) {
+    return str.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g, '');
+  }
+
+  function checkAnswer() {
+    const user = document.getElementById('userAnswer').value;
+    const correct = quiz[index].answer;
+    const isGood = normalize(user) === normalize(correct);
+    if (isGood) score++;
+    history.push({ question: quiz[index].question, user, correct, isGood });
+    quizBox.innerHTML = `
+      <p class="${isGood ? 'good' : 'bad'}">${isGood ? '✅ Bonne réponse' : '❌ Mauvaise réponse'}</p>
+      <p><em>Réponse attendue :</em> ${correct}</p>
+      <button onclick="override(${history.length - 1})">Forcer comme bonne</button>
+      <button onclick="continueQuiz()">Continuer</button>`;
+  }
+
+  function override(i) {
+    if (!history[i].isGood) score++;
+    history[i].isGood = true;
+    quizBox.innerHTML = '<p class="good">✔ Réponse validée manuellement</p><button onclick="continueQuiz()">Continuer</button>';
+  }
+
+  function continueQuiz() {
+    index++;
+    nextQuestion();
+  }
+
+  function endQuiz() {
+    const percent = Math.round((score / quiz.length) * 100);
+    quizBox.innerHTML = `<h3>Résultat : ${percent}%</h3>`;
+    history.forEach(h => {
+      quizBox.innerHTML += `
+        <p class="${h.isGood ? 'good' : 'bad'}">
+          ${h.question}<br>
+          Ta réponse : ${h.user || '(vide)'}<br>
+          Bonne réponse : ${h.correct}
+        </p>`;
+    });
+    progress.textContent = `${quiz.length}/${quiz.length} questions`;
+  }
+
+  renderCards();
+</script>
+
+</body>
+</html>
